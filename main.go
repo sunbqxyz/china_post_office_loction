@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-rod/rod"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,11 +18,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	posts := []*ChinaPostInfo{}
+	var posts []*ChinaPostInfo
 	for i := 0; i < pageTotal; i += 10 {
 		posts = append(posts, getPost(i, browser)...)
 	}
-	fmt.Println(len(posts))
+	WriteJson(posts)
 
 }
 
@@ -57,7 +60,7 @@ func retry(currentPage int, browser *rod.Browser) []*ChinaPostInfo {
 	page := browser.MustPage(fmt.Sprintf("http://iframe.chinapost.com.cn/jsp/type/institutionalsite/SiteSearchJT.jsp?community=ChinaPostJT&pos=%d", currentPage)).MustWaitLoad()
 	defer page.MustClose()
 	eles := page.MustElements(`.wangd2 > tbody >tr`)
-	list := []*ChinaPostInfo{}
+	var list []*ChinaPostInfo
 	for i, ele := range eles {
 		if i == 0 {
 			continue
@@ -81,15 +84,34 @@ func retry(currentPage int, browser *rod.Browser) []*ChinaPostInfo {
 	return list
 }
 
-type ChinaPostInfo struct {
-	Province string
-	City     string
-	County   string
-	Info     string
-	Post     string
-	Addr     string
+//WriteJson 写入json file
+func WriteJson(area []*ChinaPostInfo) {
+	areaBytes, err := json.Marshal(area)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(0)
+	}
+	fileName := "dist/china-post-%d.json"
+	currentTime := time.Now().UnixNano() / 1e6
+	fileName = fmt.Sprintf(fileName, currentTime)
+	err = ioutil.WriteFile(fileName, areaBytes, 0666)
+	if err != nil {
+		fmt.Printf("create file error: %s", err.Error())
+		return
+	}
 }
 
+//ChinaPostInfo 中国邮政详情
+type ChinaPostInfo struct {
+	Province string `json:"province"`
+	City     string `json:"city"`
+	County   string `json:"county"`
+	Info     string `json:"info"`
+	Post     string `json:"post"`
+	Addr     string `json:"addr"`
+}
+
+//NewChinaPostInfo 新建 ChinaPostInfo
 func NewChinaPostInfo(province, city, county, info, post, addr string) *ChinaPostInfo {
 	return &ChinaPostInfo{
 		province,
