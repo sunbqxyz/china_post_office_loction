@@ -8,7 +8,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+)
+
+var (
+	MaxThread = 10
 )
 
 func main() {
@@ -18,12 +23,37 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	//var posts []*ChinaPostInfo
+	//for i := 0; i < pageTotal; i += 10 {
+	//	posts = append(posts, getPost(i, browser)...)
+	//}
+	posts := thread(pageTotal, browser)
+	WriteJson(posts)
+}
+
+func thread(pageTotal int, browser *rod.Browser) []*ChinaPostInfo {
+	var wg sync.WaitGroup
+	//每个线程需要抓取的页数
+	var size = pageTotal / MaxThread
+	//剩余页数
+	var surplusSize = pageTotal % MaxThread
 	var posts []*ChinaPostInfo
-	for i := 0; i < pageTotal; i += 10 {
+	for i := 0; i < MaxThread; i++ {
+		wg.Add(1)
+		go threadFunc(i, size, posts, browser, &wg)
+	}
+	if surplusSize != 0 {
+		wg.Add(1)
+		go threadFunc(MaxThread, surplusSize, posts, browser, &wg)
+	}
+	wg.Wait()
+	return posts
+}
+func threadFunc(currentThreadIndex int, threadSize int, posts []*ChinaPostInfo, browser *rod.Browser, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	for i := currentThreadIndex * threadSize; i <= (currentThreadIndex+1)*threadSize; i++ {
 		posts = append(posts, getPost(i, browser)...)
 	}
-	WriteJson(posts)
-
 }
 
 //getPageTotal 获取总页数
