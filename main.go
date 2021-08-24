@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	MaxThread = 10
+	MaxThread = 32
 )
 
 func main() {
@@ -82,8 +82,8 @@ func threadFunc(startPage int,
 	browser *rod.Browser,
 	waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
-	for i := startPage; i <= endPage; i++ {
-		posts := getPost(i, browser)
+	for page := startPage; page <= endPage; page++ {
+		posts := getPost(page, browser)
 		valueChan <- posts
 	}
 }
@@ -119,7 +119,7 @@ func getPost(currentPage int, browser *rod.Browser) (result []*ChinaPostInfo) {
 	}
 }
 func retry(currentPage int, browser *rod.Browser) []*ChinaPostInfo {
-	page := browser.MustPage(fmt.Sprintf("http://iframe.chinapost.com.cn/jsp/type/institutionalsite/SiteSearchJT.jsp?community=ChinaPostJT&pos=%d", currentPage)).MustWaitLoad()
+	page := browser.MustPage(fmt.Sprintf("http://iframe.chinapost.com.cn/jsp/type/institutionalsite/SiteSearchJT.jsp?community=ChinaPostJT&pos=%d", currentPage*10)).MustWaitLoad()
 	defer page.MustClose()
 	eles := page.MustElements(`.wangd2 > tbody >tr`)
 	var list []*ChinaPostInfo
@@ -139,7 +139,7 @@ func retry(currentPage int, browser *rod.Browser) []*ChinaPostInfo {
 			children[4].MustText(),
 			children[5].MustText(),
 		)
-		fmt.Printf("%s %s %s %s\n", chinaPost.Province, chinaPost.City, chinaPost.County, chinaPost.Post)
+		fmt.Printf("%s %s %s %s %s\n", chinaPost.Province, chinaPost.City, chinaPost.County, chinaPost.Addr, chinaPost.Post)
 
 		list = append(list, chinaPost)
 	}

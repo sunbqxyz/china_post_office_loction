@@ -24,8 +24,8 @@ func Test_thread(t *testing.T) {
 	}
 }
 func Test_thread2(t *testing.T) {
-	totalPage := 20
-	threadCount := 10
+	totalPage := 48420
+	threadCount := 32
 	everPage := totalPage / threadCount
 	everPageAdd := totalPage % threadCount
 	starPage := 0
