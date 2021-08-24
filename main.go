@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	MaxThread = 10
+	threadCount = 10
 )
 
 func main() {
@@ -38,19 +38,20 @@ func forEach(totalPage int, browser *rod.Browser) []*ChinaPostInfo {
 
 //thread 多协程抓取
 func thread(pageTotal int, browser *rod.Browser) []*ChinaPostInfo {
-	var wg sync.WaitGroup
-	totalPage := pageTotal / 10
-	//每个线程要处理的页数
-	everPage := totalPage / MaxThread
-	//前几个线程要增加一页
-	everPageAdd := totalPage % MaxThread
 	var (
-		startPage = 0
-		endPage   = 0
-		flag      = 0
+		totalPage = pageTotal / 10
+		//每个线程要处理的页数
+		everPage = totalPage / threadCount
+		//前几个线程要增加一页
+		everPageAdd = totalPage % threadCount
+		startPage   = 0
+		endPage     = 0
+		flag        = 0
+		wg          sync.WaitGroup
+		posts       []*ChinaPostInfo
 	)
-	var value = make(chan []*ChinaPostInfo, pageTotal*10)
-	for page := 0; page < MaxThread; page++ {
+	var value = make(chan []*ChinaPostInfo)
+	for page := 0; page < threadCount; page++ {
 		if page == 0 {
 			startPage = 0
 		} else {
@@ -60,17 +61,15 @@ func thread(pageTotal int, browser *rod.Browser) []*ChinaPostInfo {
 			endPage = (page+1)*everPage + flag
 			flag++
 		} else {
-			endPage = (page+1)*everPage + flag - 1
+			endPage = (page+1)*everPage + flag
 		}
 		wg.Add(1)
-		go threadFunc(startPage, endPage, value, browser, &wg)
+		go threadFunc(startPage, endPage, &wg, value, browser)
 	}
 	go func() {
 		wg.Wait()
-		close(value)
+		defer close(value)
 	}()
-
-	var posts []*ChinaPostInfo
 	for data := range value {
 		if data == nil {
 			break
@@ -80,16 +79,14 @@ func thread(pageTotal int, browser *rod.Browser) []*ChinaPostInfo {
 
 	return posts
 }
-func threadFunc(startPage int,
-	endPage int,
-	valueChan chan []*ChinaPostInfo,
-	browser *rod.Browser,
-	waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
+
+func threadFunc(startPage, endPage int, wg *sync.WaitGroup, chanValue chan []*ChinaPostInfo, browser *rod.Browser) {
+	var posts []*ChinaPostInfo
 	for page := startPage; page <= endPage; page++ {
-		posts := getPost(page, browser)
-		valueChan <- posts
+		posts = append(posts, getPost(page, browser)...)
 	}
+	chanValue <- posts
+	defer wg.Done()
 }
 
 //getPageTotal 获取总页数

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/go-rod/rod"
+	"sync"
 	"testing"
 )
 
@@ -24,7 +25,7 @@ func Test_thread(t *testing.T) {
 	}
 }
 func Test_thread2(t *testing.T) {
-	totalPage := 52130 / 10
+	totalPage := 48420 / 10
 	threadCount := 10
 	everPage := totalPage / threadCount
 	everPageAdd := totalPage % threadCount
@@ -50,6 +51,40 @@ func Test_thread2(t *testing.T) {
 func Test_thread1(t *testing.T) {
 	browser := rod.New().MustConnect()
 	defer browser.MustClose()
-	posts := thread(300, browser)
+	posts := thread(48420, browser)
 	fmt.Println(len(posts))
+}
+
+func Test_goroutine(t *testing.T) {
+	totalPage := 48420 / 10
+	threadCount := 10
+	everPage := totalPage / threadCount
+	everPageAdd := totalPage % threadCount
+	startPage := 0
+	endPage := 0
+	var flag = 0
+	var wg sync.WaitGroup
+	for page := 0; page < threadCount; page++ {
+		if page == 0 {
+			startPage = 0
+		} else {
+			startPage = endPage + 1
+		}
+		if page < everPageAdd {
+			endPage = (page+1)*everPage + flag
+			flag++
+		} else {
+			endPage = (page+1)*everPage + flag
+		}
+		wg.Add(1)
+		go threadTest(startPage, endPage, &wg)
+	}
+	defer wg.Wait()
+}
+
+func threadTest(startPage, endPage int, wg *sync.WaitGroup) {
+	for i := startPage; i <= endPage; i++ {
+		fmt.Printf("page %d \r\n", i)
+	}
+	defer wg.Done()
 }
