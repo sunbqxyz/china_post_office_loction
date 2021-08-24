@@ -24,8 +24,8 @@ func Test_thread(t *testing.T) {
 	}
 }
 func Test_thread2(t *testing.T) {
-	totalPage := 48420
-	threadCount := 32
+	totalPage := 52130 / 10
+	threadCount := 10
 	everPage := totalPage / threadCount
 	everPageAdd := totalPage % threadCount
 	starPage := 0
@@ -41,7 +41,7 @@ func Test_thread2(t *testing.T) {
 			endPage = (page+1)*everPage + flag
 			flag++
 		} else {
-			endPage = (page+1)*everPage + flag - 1
+			endPage = (page+1)*everPage + flag
 		}
 		fmt.Printf("thread %d start %d end %d \r\n", page, starPage, endPage)
 	}
@@ -50,6 +50,6 @@ func Test_thread2(t *testing.T) {
 func Test_thread1(t *testing.T) {
 	browser := rod.New().MustConnect()
 	defer browser.MustClose()
-	posts := thread(10, browser)
+	posts := thread(300, browser)
 	fmt.Println(len(posts))
 }

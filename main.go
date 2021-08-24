@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	MaxThread = 32
+	MaxThread = 10
 )
 
 func main() {
@@ -39,10 +39,11 @@ func forEach(totalPage int, browser *rod.Browser) []*ChinaPostInfo {
 //thread 多协程抓取
 func thread(pageTotal int, browser *rod.Browser) []*ChinaPostInfo {
 	var wg sync.WaitGroup
+	totalPage := pageTotal / 10
 	//每个线程要处理的页数
-	everPage := pageTotal / MaxThread
+	everPage := totalPage / MaxThread
 	//前几个线程要增加一页
-	everPageAdd := pageTotal % MaxThread
+	everPageAdd := totalPage % MaxThread
 	var (
 		startPage = 0
 		endPage   = 0
@@ -64,8 +65,11 @@ func thread(pageTotal int, browser *rod.Browser) []*ChinaPostInfo {
 		wg.Add(1)
 		go threadFunc(startPage, endPage, value, browser, &wg)
 	}
-	wg.Wait()
-	close(value)
+	go func() {
+		wg.Wait()
+		close(value)
+	}()
+
 	var posts []*ChinaPostInfo
 	for data := range value {
 		if data == nil {
