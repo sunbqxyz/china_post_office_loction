@@ -14,18 +14,36 @@ func Test_getPost(t *testing.T) {
 }
 
 func Test_thread(t *testing.T) {
-	pageTotal := 52131
-	thread := 10
-	var threadSize int
-	//5213
-	threadSize = pageTotal / thread
-	//剩余page
-	//thread := pageTotal % thread
-
-	for i := 0; i < thread; i++ {
-		for j := i * threadSize; j <= (i+1)*threadSize; j++ {
-			fmt.Printf("thread %d page %d \n", i, j)
+	totalPage := 40
+	threadCount := 10
+	threadPage := totalPage / threadCount
+	for i := 0; i < threadCount; i++ {
+		start := i*threadPage + 1
+		end := (i + 1) * threadPage
+		fmt.Printf("thread %d start %d end %d \r\n", i, start, end)
+	}
+}
+func Test_thread2(t *testing.T) {
+	totalPage := 20
+	threadCount := 10
+	everPage := totalPage / threadCount
+	everPageAdd := totalPage % threadCount
+	starPage := 0
+	endPage := 0
+	var flag = 0
+	for page := 0; page < threadCount; page++ {
+		if page == 0 {
+			starPage = 0
+		} else {
+			starPage = endPage + 1
 		}
+		if page < everPageAdd {
+			endPage = (page+1)*everPage + flag
+			flag++
+		} else {
+			endPage = (page+1)*everPage + flag - 1
+		}
+		fmt.Printf("thread %d start %d end %d \r\n", page, starPage, endPage)
 	}
 }
 

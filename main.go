@@ -23,36 +23,68 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	//var posts []*ChinaPostInfo
-	//for i := 0; i < pageTotal; i += 10 {
-	//	posts = append(posts, getPost(i, browser)...)
-	//}
 	posts := thread(pageTotal, browser)
 	WriteJson(posts)
 }
 
-func thread(pageTotal int, browser *rod.Browser) []*ChinaPostInfo {
-	var wg sync.WaitGroup
-	//每个线程需要抓取的页数
-	var size = pageTotal / MaxThread
-	//剩余页数
-	var surplusSize = pageTotal % MaxThread
+//forEach 普通方式
+func forEach(totalPage int, browser *rod.Browser) []*ChinaPostInfo {
 	var posts []*ChinaPostInfo
-	for i := 0; i < MaxThread; i++ {
-		wg.Add(1)
-		go threadFunc(i, size, posts, browser, &wg)
+	for i := 0; i <= totalPage; i += 10 {
+		posts = append(posts, getPost(i, browser)...)
 	}
-	if surplusSize != 0 {
-		wg.Add(1)
-		go threadFunc(MaxThread, surplusSize, posts, browser, &wg)
-	}
-	wg.Wait()
 	return posts
 }
-func threadFunc(currentThreadIndex int, threadSize int, posts []*ChinaPostInfo, browser *rod.Browser, waitGroup *sync.WaitGroup) {
+
+//thread 多协程抓取
+func thread(pageTotal int, browser *rod.Browser) []*ChinaPostInfo {
+	var wg sync.WaitGroup
+	//每个线程要处理的页数
+	everPage := pageTotal / MaxThread
+	//前几个线程要增加一页
+	everPageAdd := pageTotal % MaxThread
+	var (
+		startPage = 0
+		endPage   = 0
+		flag      = 0
+	)
+	var value = make(chan []*ChinaPostInfo, pageTotal*10)
+	for page := 0; page < MaxThread; page++ {
+		if page == 0 {
+			startPage = 0
+		} else {
+			startPage = endPage + 1
+		}
+		if page < everPageAdd {
+			endPage = (page+1)*everPage + flag
+			flag++
+		} else {
+			endPage = (page+1)*everPage + flag - 1
+		}
+		wg.Add(1)
+		go threadFunc(startPage, endPage, value, browser, &wg)
+	}
+	wg.Wait()
+	close(value)
+	var posts []*ChinaPostInfo
+	for data := range value {
+		if data == nil {
+			break
+		}
+		posts = append(posts, data...)
+	}
+
+	return posts
+}
+func threadFunc(startPage int,
+	endPage int,
+	valueChan chan []*ChinaPostInfo,
+	browser *rod.Browser,
+	waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
-	for i := currentThreadIndex * threadSize; i <= (currentThreadIndex+1)*threadSize; i++ {
-		posts = append(posts, getPost(i, browser)...)
+	for i := startPage; i <= endPage; i++ {
+		posts := getPost(i, browser)
+		valueChan <- posts
 	}
 }
 
@@ -109,7 +141,7 @@ func retry(currentPage int, browser *rod.Browser) []*ChinaPostInfo {
 		)
 		fmt.Printf("%s %s %s %s\n", chinaPost.Province, chinaPost.City, chinaPost.County, chinaPost.Post)
 
-		list = append(list)
+		list = append(list, chinaPost)
 	}
 	return list
 }
