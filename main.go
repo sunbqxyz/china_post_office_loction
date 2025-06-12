@@ -19,18 +19,20 @@ var (
 func main() {
 	browser := rod.New().MustConnect()
 	defer browser.MustClose()
-	pageTotal, err := getPageTotal(browser)
-	if err != nil {
-		panic(err)
-	}
-	posts := thread(pageTotal, browser)
+	//pageTotal, err := getPageTotal(browser)
+	//if err != nil {
+	//	panic(err)
+	//}
+	pageTotal=5506
+	//posts := thread(pageTotal, browser)
+	posts := forEach(pageTotal, browser)
 	WriteJson(posts)
 }
 
 //forEach 普通方式
 func forEach(totalPage int, browser *rod.Browser) []*ChinaPostInfo {
 	var posts []*ChinaPostInfo
-	for i := 0; i <= totalPage; i += 10 {
+	for i := 0; i <= totalPage; i += 1 {
 		posts = append(posts, getPost(i, browser)...)
 	}
 	return posts
